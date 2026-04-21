@@ -21,3 +21,5 @@ node_modules/
 *.zip
 lambda/document_processor/build/
 .DS_Store
+
+files/
