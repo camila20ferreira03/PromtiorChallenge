@@ -103,7 +103,6 @@ def _process(bucket: str, key: str) -> dict[str, Any]:
         "document_type": document_type,
         "topic": user_meta.get("topic", ""),
         "category": user_meta.get("category", ""),
-        "source_bucket": bucket,
         "source_key": key,
     }
 

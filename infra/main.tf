@@ -102,3 +102,52 @@ resource "aws_s3_bucket_policy" "processed" {
 
   depends_on = [module.lambda]
 }
+
+module "network" {
+  source = "./modules/network"
+
+  name_prefix = local.name_prefix
+  vpc_cidr    = var.vpc_cidr
+  tags        = {}
+}
+
+module "ecr" {
+  source = "./modules/ecr"
+
+  name_prefix = local.name_prefix
+  tags        = {}
+}
+
+module "dynamodb" {
+  source = "./modules/dynamodb"
+
+  name_prefix = local.name_prefix
+  tags        = {}
+}
+
+module "ec2" {
+  source = "./modules/ec2"
+
+  name_prefix           = local.name_prefix
+  vpc_id                = module.network.vpc_id
+  subnet_id             = module.network.public_subnet_ids[0]
+  instance_type         = var.chat_instance_type
+  ec2_key_name          = var.chat_ec2_key_name
+  allowed_ingress_cidrs = var.chat_allowed_ingress_cidrs
+  container_port        = var.chat_container_port
+  container_image       = "${module.ecr.repository_url}:${var.chat_image_tag}"
+
+  chat_table_name = module.dynamodb.table_name
+  chat_table_arn  = module.dynamodb.table_arn
+
+  processed_bucket_name = module.s3.processed_bucket_name
+  processed_bucket_arn  = module.s3.processed_bucket_arn
+
+  ecr_repository_arn = module.ecr.repository_arn
+
+  llm_model            = var.chat_llm_model
+  summary_model        = var.chat_summary_model
+  session_max_requests = var.chat_session_max_requests
+
+  tags = {}
+}

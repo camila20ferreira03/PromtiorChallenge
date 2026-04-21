@@ -11,29 +11,20 @@ Lambda code lives in the repo at [`../lambda/document_processor`](../lambda/docu
 - Terraform `>= 1.5`
 - AWS credentials with permissions to manage S3 (incl. bucket policies), IAM, Lambda, and CloudWatch Logs
 
-## Remote state (required for team workflows)
+## State and locks (local only)
 
-1. Create an S3 bucket and a DynamoDB table (partition key `LockID`, string) for state locking.
-2. Copy [`environments/dev/terraform.tfvars.example`](environments/dev/terraform.tfvars.example) to `terraform.tfvars` in this directory (or pass `-var-file=...`).
-3. Edit [`environments/dev/backend.hcl`](environments/dev/backend.hcl) with your bucket name, state key, region, and lock table name.
-4. From `infra/`:
+This project uses the **default local backend**: `terraform.tfstate`, `terraform.tfstate.backup`, `.terraform/`, `.terraform.lock.hcl`, and transient `.terraform.tfstate.lock.info` all live in `infra/` and are **git‑ignored**. Do not commit them — they can contain bucket names, ARNs, and account IDs.
+
+1. Copy [`terraform.tfvars.example`](terraform.tfvars.example) to `terraform.tfvars` (also ignored). Terraform auto-loads any `terraform.tfvars` next to the root module, so no `-var-file` flag is needed.
+2. From `infra/`:
 
    ```bash
-   terraform init -backend-config=environments/dev/backend.hcl
+   terraform init
    terraform plan
    terraform apply
    ```
 
-## Local init (no remote backend)
-
-For formatting and validation only:
-
-```bash
-terraform init -backend=false
-terraform validate
-```
-
-Before a real apply, re-run `terraform init` with your `backend.hcl`.
+The lock file `.terraform.tfstate.lock.info` appears only while a command runs and prevents concurrent changes on the same machine.
 
 ## Variables
 

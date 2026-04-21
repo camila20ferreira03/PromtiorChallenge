@@ -1,8 +1,6 @@
-data "archive_file" "document_processor_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/../../../lambda/document_processor"
-  output_path = "${path.module}/build/document_processor.zip"
-  excludes    = ["__pycache__", "*.pyc", ".pytest_cache"]
+locals {
+  # Pre-built zip produced by the developer (see lambda/document_processor/build.sh).
+  lambda_zip_path = "${path.module}/../../../lambda/document_processor/build/document_processor.zip"
 }
 
 data "aws_iam_policy_document" "lambda_assume" {
@@ -76,8 +74,8 @@ resource "aws_lambda_function" "document_processor" {
   role             = aws_iam_role.document_processor.arn
   handler          = "handler.handler"
   runtime          = "python3.12"
-  filename         = data.archive_file.document_processor_zip.output_path
-  source_code_hash = data.archive_file.document_processor_zip.output_base64sha256
+  filename         = local.lambda_zip_path
+  source_code_hash = filebase64sha256(local.lambda_zip_path)
 
   timeout     = 180
   memory_size = 1024
