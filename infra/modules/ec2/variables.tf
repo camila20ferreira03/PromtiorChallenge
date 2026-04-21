@@ -85,6 +85,12 @@ variable "session_max_requests" {
   default     = 10
 }
 
+variable "root_volume_size_gb" {
+  type        = number
+  description = "Root EBS volume size (GB). Must be >= the AMI snapshot size; AL2023 ships a 30 GB snapshot."
+  default     = 30
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

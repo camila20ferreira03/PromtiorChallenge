@@ -4,6 +4,9 @@ langchain==0.3.0
 langchain-core==0.3.0
 langchain-openai==0.2.0
 langserve[server]==0.3.0
-sse-starlette==2.1.3
+# langserve 0.3.0 imports httpx.VerifyTypes; removed in httpx 0.28+
+httpx>=0.27.0,<0.28.0
+# langserve[server] 0.3.x requires sse-starlette>=1.3.0,<2.0.0 (2.x breaks resolution)
+sse-starlette>=1.3.0,<2.0.0
 boto3==1.35.0
 pydantic==2.9.2
