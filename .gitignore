@@ -1,6 +1,8 @@
 .terraform/
+.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+.terraform.tfstate.lock.info
 *.tfvars
 !*.tfvars.example
 crash.log
@@ -17,5 +19,5 @@ venv/
 .env
 node_modules/
 *.zip
-infra/modules/lambda/build/
+lambda/document_processor/build/
 .DS_Store
