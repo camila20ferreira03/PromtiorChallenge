@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isSessionRequestLimitError } from "../lib/chatErrors";
 import { ensureSessionId, rotateSessionId } from "../lib/persistedSessionId";
 import { sendChatMessage } from "../lib/chatApi";
 import type { ChatMessage } from "../types";
@@ -12,6 +13,8 @@ export interface UseChatSession {
   messages: ChatMessage[];
   isThinking: boolean;
   error: string | null;
+  /** True when `error` is the per-session request cap (429). */
+  isSessionRequestLimit: boolean;
   send: (message: string) => Promise<void>;
   startNewChat: () => void;
   dismissError: () => void;
@@ -22,6 +25,7 @@ export function useChatSession(): UseChatSession {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSessionRequestLimit, setIsSessionRequestLimit] = useState(false);
   const activeSessionRef = useRef(sessionId);
 
   useEffect(() => {
@@ -34,6 +38,7 @@ export function useChatSession(): UseChatSession {
       if (!message || isThinking) return;
 
       setError(null);
+      setIsSessionRequestLimit(false);
       const currentSession = activeSessionRef.current;
       const userMsg: ChatMessage = {
         id: newId(),
@@ -57,7 +62,10 @@ export function useChatSession(): UseChatSession {
         setMessages((prev) => [...prev, replyMsg]);
       } catch (err) {
         if (activeSessionRef.current !== currentSession) return;
-        setError(err instanceof Error ? err.message : "Something went wrong.");
+        const message =
+          err instanceof Error ? err.message : "Something went wrong.";
+        setError(message);
+        setIsSessionRequestLimit(isSessionRequestLimitError(message));
       } finally {
         if (activeSessionRef.current === currentSession) setIsThinking(false);
       }
@@ -68,11 +76,24 @@ export function useChatSession(): UseChatSession {
   const startNewChat = useCallback(() => {
     setMessages([]);
     setError(null);
+    setIsSessionRequestLimit(false);
     setIsThinking(false);
     setSessionId(rotateSessionId());
   }, []);
 
-  const dismissError = useCallback(() => setError(null), []);
+  const dismissError = useCallback(() => {
+    setError(null);
+    setIsSessionRequestLimit(false);
+  }, []);
 
-  return { sessionId, messages, isThinking, error, send, startNewChat, dismissError };
+  return {
+    sessionId,
+    messages,
+    isThinking,
+    error,
+    isSessionRequestLimit,
+    send,
+    startNewChat,
+    dismissError,
+  };
 }
