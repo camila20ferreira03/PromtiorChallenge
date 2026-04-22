@@ -1,19 +1,10 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-data "aws_ami" "al2023" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
+# Official Amazon Linux 2023 (kernel default, x86_64) — avoids ECS-optimized AMIs
+# that match broad "al2023-ami-*-x86_64" and spawn a crashing ecs-agent container.
+data "aws_ssm_parameter" "al2023_ami" {
+  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
 
 resource "aws_secretsmanager_secret" "openai" {
@@ -152,20 +143,31 @@ locals {
   user_data = <<-EOT
     #!/bin/bash
     set -euo pipefail
+    exec > >(tee -a /var/log/chat-bootstrap.log) 2>&1
+    echo "=== chat bootstrap $(date -Is) ==="
 
-    dnf update -y
-    dnf install -y docker
+    # Do not `dnf install curl` — it conflicts with the default curl-minimal on AL2023.
+    dnf install -y docker unzip
+    if ! command -v aws >/dev/null 2>&1; then
+      curl -fSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+      unzip -oq /tmp/awscliv2.zip -d /tmp
+      /tmp/aws/install --update
+    fi
     systemctl enable --now docker
 
     AWS_REGION="${data.aws_region.current.name}"
     ECR_REGISTRY="${data.aws_caller_identity.current.account_id}.dkr.ecr.$${AWS_REGION}.amazonaws.com"
     IMAGE="${var.container_image}"
 
+    aws --version
+    docker --version
+
     aws ecr get-login-password --region "$${AWS_REGION}" \
       | docker login --username AWS --password-stdin "$${ECR_REGISTRY}"
 
     docker pull "$${IMAGE}"
 
+    docker rm -f chat-api 2>/dev/null || true
     docker run -d \
       --name chat-api \
       --restart unless-stopped \
@@ -177,13 +179,16 @@ locals {
       -e LLM_MODEL="${var.llm_model}" \
       -e SUMMARY_MODEL="${var.summary_model}" \
       -e SESSION_MAX_REQUESTS="${var.session_max_requests}" \
+      -e CORS_ALLOW_ORIGINS="${var.cors_allow_origins}" \
       -e PORT="${var.container_port}" \
       "$${IMAGE}"
+
+    echo "=== chat bootstrap done $(date -Is) ==="
   EOT
 }
 
 resource "aws_instance" "chat" {
-  ami                         = data.aws_ami.al2023.id
+  ami                         = trimspace(data.aws_ssm_parameter.al2023_ami.value)
   instance_type               = var.instance_type
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = [aws_security_group.chat.id]

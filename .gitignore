@@ -23,3 +23,9 @@ lambda/document_processor/build/
 .DS_Store
 
 files/
+
+# Shell scripts (local deploy helpers, etc.)
+**/*.sh
+!scripts/*.sh
+
+scripts/

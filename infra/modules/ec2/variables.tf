@@ -91,6 +91,12 @@ variable "root_volume_size_gb" {
   default     = 30
 }
 
+variable "cors_allow_origins" {
+  type        = string
+  description = "Comma-separated browser origins for CORS (e.g. https://d123.cloudfront.net,http://localhost:5173)."
+  default     = "http://localhost:5173,http://127.0.0.1:5173"
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

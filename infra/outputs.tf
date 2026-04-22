@@ -43,3 +43,23 @@ output "chat_openai_secret_arn" {
   value       = module.ec2.openai_secret_arn
   sensitive   = true
 }
+
+output "frontend_bucket_name" {
+  description = "Upload the Vite build: aws s3 sync ../frontend/dist/ s3://<this> --delete"
+  value       = module.cloudfront_frontend.bucket_name
+}
+
+output "frontend_cloudfront_domain" {
+  description = "HTTPS URL host for the SPA; add https://<this> to chat_cors_allow_origins and re-apply."
+  value       = module.cloudfront_frontend.domain_name
+}
+
+output "frontend_cloudfront_url" {
+  description = "Base URL for the deployed UI (build frontend with VITE_CHAT_API_URL empty for same-origin API calls)."
+  value       = "https://${module.cloudfront_frontend.domain_name}"
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "Use for cache invalidation after uploading new assets."
+  value       = module.cloudfront_frontend.distribution_id
+}

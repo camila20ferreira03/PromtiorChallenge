@@ -149,5 +149,18 @@ module "ec2" {
   summary_model        = var.chat_summary_model
   session_max_requests = var.chat_session_max_requests
 
+  cors_allow_origins = join(",", var.chat_cors_allow_origins)
+
   tags = {}
+}
+
+module "cloudfront_frontend" {
+  source = "./modules/cloudfront_frontend"
+
+  name_prefix          = local.name_prefix
+  chat_origin_domain   = module.ec2.instance_public_dns
+  chat_origin_port     = var.chat_container_port
+  tags                 = {}
+
+  depends_on = [module.ec2]
 }

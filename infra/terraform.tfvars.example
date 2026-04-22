@@ -1,5 +1,5 @@
-
-
 aws_region   = "us-east-1"
 project_name = "promtior-doc-pipeline"
 environment  = "dev"
+
+# After terraform apply, add your CloudFront domain so the API allows browser calls from the UI:

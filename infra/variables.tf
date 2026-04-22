@@ -68,3 +68,16 @@ variable "chat_session_max_requests" {
   description = "Lifetime request cap per session_id (HTTP 429 when exceeded)."
   default     = 10
 }
+
+variable "chat_cors_allow_origins" {
+  type = list(string)
+  description = <<-EOT
+    Origins allowed by the chat API (CORS). Include local dev and, after the first apply,
+    https://<frontend_cloudfront_domain> from terraform output, then apply again so EC2
+    user_data passes the updated list to the container.
+  EOT
+  default = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ]
+}

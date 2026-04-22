@@ -1,5 +1,5 @@
 locals {
-  # Pre-built zip produced by the developer (see lambda/document_processor/build.sh).
+  # Pre-built zip produced by the developer (see scripts/build-lambda-document-processor.sh).
   lambda_zip_path = "${path.module}/../../../lambda/document_processor/build/document_processor.zip"
 }
 

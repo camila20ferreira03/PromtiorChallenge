@@ -6,9 +6,14 @@
 //   body: { "input": { "session_id": string, "message": string } }
 //   200 : { "output": string, "metadata": {...}, ... }
 
+const envBase = (import.meta.env.VITE_CHAT_API_URL as string | undefined)?.trim();
+// Production build: empty → same origin (CloudFront serves UI and proxies /chat* to EC2).
 const BASE_URL: string = (
-  (import.meta.env.VITE_CHAT_API_URL as string | undefined) ??
-  "http://localhost:8000"
+  envBase && envBase.length > 0
+    ? envBase
+    : import.meta.env.PROD
+      ? ""
+      : "http://localhost:8000"
 ).replace(/\/+$/, "");
 
 interface InvokeResponse {
