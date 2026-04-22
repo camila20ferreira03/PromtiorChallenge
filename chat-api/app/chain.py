@@ -31,12 +31,13 @@ from pydantic import BaseModel, Field
 from app.config import LLM_MODEL, SESSION_MAX_REQUESTS
 from app.docs import get_docs_json
 from app.memory import append_and_maybe_summarize, format_context, load_context
+from app.prompt_metrics import log_chat_prompt
 from app.storage import QuotaExceededError, reserve_request_slot
 
 log = logging.getLogger(__name__)
 
 
-SYSTEM_PROMPT = """You are a chatbot assistant for Promtior.
+SYSTEM_PROMPT = """INSTRUCTIONS: You are a chatbot assistant for Promtior.
 
 You must answer questions only using the provided documents and conversation context.
 Do not generate, assume, or infer any information that is not explicitly present in the sources.
@@ -73,9 +74,7 @@ Behavior Guidelines:
 - Maintain a professional and concise tone."""
 
 
-USER_PROMPT_TEMPLATE = """INSTRUCTIONS:
-You are a chatbot assistant for Promtior. Answer only using the provided documents and conversation context.
-
+USER_PROMPT_TEMPLATE = """
 DOCS:
 {retrieved_documents_json}
 
