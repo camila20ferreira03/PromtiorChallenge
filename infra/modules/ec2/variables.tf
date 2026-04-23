@@ -92,12 +92,6 @@ variable "summary_model" {
   default     = "gpt-4o-mini"
 }
 
-variable "session_max_requests" {
-  type        = number
-  description = "Lifetime request cap per session_id."
-  default     = 10
-}
-
 variable "root_volume_size_gb" {
   type        = number
   description = "Root EBS volume size (GB). Must be >= the AMI snapshot size; AL2023 ships a 30 GB snapshot."

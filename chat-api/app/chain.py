@@ -1,11 +1,10 @@
 """LangChain runnable that fronts LangServe /chat/invoke and /chat/stream.
 
 Design:
-  1. Enforce per-session quota (atomic conditional UpdateItem).
-  2. Embed the user question and pull top-k chunks from pgvector (app.vectors).
-  3. Render the locked prompt (see SYSTEM_PROMPT / USER_PROMPT_TEMPLATE).
-  4. Stream tokens from the LLM while accumulating the full reply.
-  5. After the stream drains (same code path for invoke and stream), persist
+  1. Embed the user question and pull top-k chunks from pgvector (app.vectors).
+  2. Render the locked prompt (see SYSTEM_PROMPT / USER_PROMPT_TEMPLATE).
+  3. Stream tokens from the LLM while accumulating the full reply.
+  4. After the stream drains (same code path for invoke and stream), persist
      the user message + assistant reply and run summarize-if-overflow.
 """
 from __future__ import annotations
@@ -29,9 +28,8 @@ from langchain_core.runnables import RunnableGenerator
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from app.config import LLM_MODEL, RETRIEVAL_K, SESSION_MAX_REQUESTS
+from app.config import LLM_MODEL, RETRIEVAL_K
 from app.memory import append_and_maybe_summarize, format_context, load_context
-from app.storage import QuotaExceededError, reserve_request_slot
 from app.vectors import format_retrieved_as_docs_json, retrieve
 
 log = logging.getLogger(__name__)
@@ -198,14 +196,6 @@ async def _atransform(
             raise HTTPException(status_code=400, detail="session_id is required")
         if not message or not message.strip():
             raise HTTPException(status_code=400, detail="message is required")
-
-        try:
-            reserve_request_slot(session_id, SESSION_MAX_REQUESTS)
-        except QuotaExceededError:
-            raise HTTPException(
-                status_code=429,
-                detail=f"session request limit reached ({SESSION_MAX_REQUESTS})",
-            )
 
         t0 = time.perf_counter()
         summary, recent = load_context(session_id)

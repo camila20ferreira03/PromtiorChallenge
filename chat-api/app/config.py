@@ -30,7 +30,6 @@ RETRIEVAL_K: int = int(os.getenv("RETRIEVAL_K", "6"))
 
 HISTORY_MAX_MESSAGES: int = int(os.getenv("HISTORY_MAX_MESSAGES", "12"))
 HISTORY_KEEP_RECENT: int = int(os.getenv("HISTORY_KEEP_RECENT", "6"))
-SESSION_MAX_REQUESTS: int = int(os.getenv("SESSION_MAX_REQUESTS", "10"))
 
 
 @lru_cache(maxsize=1)

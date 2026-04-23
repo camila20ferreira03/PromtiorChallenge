@@ -173,7 +173,6 @@ locals {
       -e RETRIEVAL_K="${var.retrieval_k}" \
       -e LLM_MODEL="${var.llm_model}" \
       -e SUMMARY_MODEL="${var.summary_model}" \
-      -e SESSION_MAX_REQUESTS="${var.session_max_requests}" \
       -e CORS_ALLOW_ORIGINS="${var.cors_allow_origins}" \
       -e PORT="${var.container_port}" \
       "$${IMAGE}"

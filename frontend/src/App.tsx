@@ -11,8 +11,8 @@ export default function App() {
   const {
     messages,
     isThinking,
+    streamingMessageId,
     error,
-    isSessionRequestLimit,
     send,
     startNewChat,
     dismissError,
@@ -38,6 +38,7 @@ export default function App() {
         <ChatWindow
           messages={messages}
           isThinking={isThinking}
+          streamingMessageId={streamingMessageId}
           onSelectPrompt={handleSelectPrompt}
         />
 
@@ -45,59 +46,28 @@ export default function App() {
           <div className="mx-auto w-full max-w-3xl">
             {error && (
               <div
-                className={
-                  isSessionRequestLimit
-                    ? "mb-3 flex animate-fade-in flex-col gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] px-3.5 py-2.5 text-[13px] text-amber-100/95"
-                    : "mb-3 flex animate-fade-in items-start justify-between gap-3 rounded-xl border border-red-400/20 bg-red-500/[0.08] px-3.5 py-2.5 text-[13px] text-red-200"
-                }
+                className="mb-3 flex animate-fade-in items-start justify-between gap-3 rounded-xl border border-red-400/20 bg-red-500/[0.08] px-3.5 py-2.5 text-[13px] text-red-200"
                 role="alert"
               >
-                <div className="flex w-full items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    {isSessionRequestLimit ? (
-                      <>
-                        <p className="font-medium">You have reached the message limit for this chat.</p>
-                        <p className="mt-0.5 text-amber-100/75">
-                          Start a <span className="text-amber-100/90">new chat</span> to
-                          keep going. The limit resets for a new session.
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-red-200/90">{error}</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={dismissError}
-                    className={
-                      isSessionRequestLimit
-                        ? "focus-ring shrink-0 rounded p-1 text-amber-200/70 transition hover:bg-amber-500/10 hover:text-amber-50"
-                        : "focus-ring shrink-0 rounded p-1 text-red-200/70 transition hover:bg-red-500/10 hover:text-red-100"
-                    }
-                    aria-label={isSessionRequestLimit ? "Dismiss" : "Dismiss error"}
-                  >
-                    <svg
-                      viewBox="0 0 20 20"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    >
-                      <path d="M5 5l10 10M15 5L5 15" />
-                    </svg>
-                  </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-red-200/90">{error}</p>
                 </div>
-                {isSessionRequestLimit && (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={startNewChat}
-                      className="focus-ring rounded-lg bg-amber-400/20 px-3 py-1.5 text-[13px] font-medium text-amber-50 transition hover:bg-amber-400/30"
-                    >
-                      Start new chat
-                    </button>
-                  </div>
-                )}
+                <button
+                  onClick={dismissError}
+                  className="focus-ring shrink-0 rounded p-1 text-red-200/70 transition hover:bg-red-500/10 hover:text-red-100"
+                  aria-label="Dismiss error"
+                >
+                  <svg
+                    viewBox="0 0 20 20"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  >
+                    <path d="M5 5l10 10M15 5L5 15" />
+                  </svg>
+                </button>
               </div>
             )}
             <ChatInput ref={inputRef} onSend={send} disabled={isThinking} />

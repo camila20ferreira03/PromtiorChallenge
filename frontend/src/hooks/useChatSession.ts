@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isSessionRequestLimitError } from "../lib/chatErrors";
 import { ensureSessionId, rotateSessionId } from "../lib/persistedSessionId";
-import { sendChatMessage } from "../lib/chatApi";
+import { streamChatMessage } from "../lib/chatApi";
 import type { ChatMessage } from "../types";
 
 function newId(): string {
@@ -11,10 +10,11 @@ function newId(): string {
 export interface UseChatSession {
   sessionId: string;
   messages: ChatMessage[];
+  /** True until the first token arrives (assistant bubble shows the thinking dots). */
   isThinking: boolean;
+  /** Id of the assistant message currently receiving streamed tokens, or null. */
+  streamingMessageId: string | null;
   error: string | null;
-  /** True when `error` is the per-session request cap (429). */
-  isSessionRequestLimit: boolean;
   send: (message: string) => Promise<void>;
   startNewChat: () => void;
   dismissError: () => void;
@@ -24,8 +24,8 @@ export function useChatSession(): UseChatSession {
   const [sessionId, setSessionId] = useState<string>(() => ensureSessionId());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isSessionRequestLimit, setIsSessionRequestLimit] = useState(false);
   const activeSessionRef = useRef(sessionId);
 
   useEffect(() => {
@@ -38,7 +38,6 @@ export function useChatSession(): UseChatSession {
       if (!message || isThinking) return;
 
       setError(null);
-      setIsSessionRequestLimit(false);
       const currentSession = activeSessionRef.current;
       const userMsg: ChatMessage = {
         id: newId(),
@@ -49,31 +48,52 @@ export function useChatSession(): UseChatSession {
       setMessages((prev) => [...prev, userMsg]);
       setIsThinking(true);
 
+      const assistantId = newId();
+      let firstTokenSeen = false;
+      let assistantAppended = false;
+
       try {
-        const replyText = await sendChatMessage(currentSession, message);
-        // Drop the reply if the user started a new chat while we were waiting.
-        if (activeSessionRef.current !== currentSession) return;
-        const replyMsg: ChatMessage = {
-          id: newId(),
-          role: "assistant",
-          content: replyText,
-          createdAt: Date.now(),
-        };
-        setMessages((prev) => [...prev, replyMsg]);
+        await streamChatMessage(currentSession, message, {
+          onToken: (token) => {
+            if (activeSessionRef.current !== currentSession) return;
+            if (!firstTokenSeen) {
+              firstTokenSeen = true;
+              assistantAppended = true;
+              setIsThinking(false);
+              setStreamingMessageId(assistantId);
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: assistantId,
+                  role: "assistant",
+                  content: token,
+                  createdAt: Date.now(),
+                },
+              ]);
+              return;
+            }
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, content: m.content + token } : m,
+              ),
+            );
+          },
+        });
       } catch (err) {
         if (activeSessionRef.current !== currentSession) return;
-        const technicalMessage =
-          err instanceof Error ? err.message : "Unknown error";
         if (import.meta.env.DEV) {
           console.error("Chat request failed:", err);
         }
-        setIsSessionRequestLimit(
-          isSessionRequestLimitError(technicalMessage),
-        );
-        // Never surface HTTP bodies, stack traces, or network details in UI.
+        if (assistantAppended) {
+          // Drop the half-written bubble so the error banner is the single source of truth.
+          setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        }
         setError("An internal error occurred. Please try again.");
       } finally {
-        if (activeSessionRef.current === currentSession) setIsThinking(false);
+        if (activeSessionRef.current === currentSession) {
+          setIsThinking(false);
+          setStreamingMessageId(null);
+        }
       }
     },
     [isThinking],
@@ -82,22 +102,21 @@ export function useChatSession(): UseChatSession {
   const startNewChat = useCallback(() => {
     setMessages([]);
     setError(null);
-    setIsSessionRequestLimit(false);
     setIsThinking(false);
+    setStreamingMessageId(null);
     setSessionId(rotateSessionId());
   }, []);
 
   const dismissError = useCallback(() => {
     setError(null);
-    setIsSessionRequestLimit(false);
   }, []);
 
   return {
     sessionId,
     messages,
     isThinking,
+    streamingMessageId,
     error,
-    isSessionRequestLimit,
     send,
     startNewChat,
     dismissError,

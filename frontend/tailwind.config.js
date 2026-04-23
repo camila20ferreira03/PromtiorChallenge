@@ -51,6 +51,10 @@ export default {
           "0%, 100%": { opacity: "0.55", filter: "blur(12px)" },
           "50%": { opacity: "0.9", filter: "blur(16px)" },
         },
+        "caret-blink": {
+          "0%, 49%": { opacity: "1" },
+          "50%, 100%": { opacity: "0" },
+        },
       },
       animation: {
         "slide-in-up": "slide-in-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both",
@@ -58,6 +62,7 @@ export default {
         "pulse-dot": "pulse-dot 1.2s ease-in-out infinite",
         shimmer: "shimmer 2.4s linear infinite",
         "breathing-glow": "breathing-glow 2.8s ease-in-out infinite",
+        "caret-blink": "caret-blink 1s steps(2, start) infinite",
       },
     },
   },

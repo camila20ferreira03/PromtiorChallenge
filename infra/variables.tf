@@ -63,12 +63,6 @@ variable "chat_summary_model" {
   default     = "gpt-4o-mini"
 }
 
-variable "chat_session_max_requests" {
-  type        = number
-  description = "Lifetime request cap per session_id (HTTP 429 when exceeded)."
-  default     = 10
-}
-
 variable "embedding_model" {
   type        = string
   description = "OpenAI embedding model id shared by the embedding Lambda and the chat API query path."

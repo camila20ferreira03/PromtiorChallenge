@@ -16,10 +16,8 @@ from app.config import (
     LLM_MODEL,
     PGVECTOR_COLLECTION,
     RETRIEVAL_K,
-    SESSION_MAX_REQUESTS,
     load_openai_key,
 )
-from app.storage import get_request_count
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -61,18 +59,6 @@ def config() -> dict[str, object]:
         "embedding_model": EMBEDDING_MODEL,
         "pgvector_collection": PGVECTOR_COLLECTION,
         "retrieval_k": RETRIEVAL_K,
-        "session_max_requests": SESSION_MAX_REQUESTS,
-    }
-
-
-@app.get("/sessions/{session_id}/usage")
-def session_usage(session_id: str) -> dict[str, object]:
-    used = get_request_count(session_id)
-    return {
-        "session_id": session_id,
-        "used": used,
-        "limit": SESSION_MAX_REQUESTS,
-        "remaining": max(SESSION_MAX_REQUESTS - used, 0),
     }
 
 

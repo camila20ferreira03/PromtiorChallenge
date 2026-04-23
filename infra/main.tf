@@ -67,9 +67,8 @@ module "ec2" {
   pgvector_collection = var.pgvector_collection
   retrieval_k         = var.retrieval_k
 
-  llm_model            = var.chat_llm_model
-  summary_model        = var.chat_summary_model
-  session_max_requests = var.chat_session_max_requests
+  llm_model     = var.chat_llm_model
+  summary_model = var.chat_summary_model
 
   cors_allow_origins = join(",", var.chat_cors_allow_origins)
 

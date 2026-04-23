@@ -5,7 +5,7 @@ Retrieval-augmented chatbot about Promtior. The user asks a question in a web UI
 
 ## Repository layout
 
-- `chat-api/` — FastAPI + LangServe backend. Handles `/chat/invoke` and `/chat/stream`, retrieval, prompt assembly, session memory and quota.
+- `chat-api/` — FastAPI + LangServe backend. Handles `/chat/invoke` and `/chat/stream`, retrieval, prompt assembly and session memory.
 - `frontend/` — Vite + React + TypeScript chat UI.
 - `lambda/document_processor/` — S3-triggered Lambda. Input: raw PDF/HTML. Output: JSONL of text chunks with metadata.
 - `lambda/embedding_processor/` — S3-triggered Lambda. Input: chunk JSONL. Output: rows in pgvector (idempotent per `source_id`).
@@ -24,16 +24,15 @@ Retrieval-augmented chatbot about Promtior. The user asks a question in a web UI
 - **Raw S3 bucket** — user-uploaded PDF/HTML.
 - **Processed S3 bucket** — `processed/<source>.chunks.jsonl`, one JSON object per line: `{ "text": "...", "metadata": { "source_id", "chunk_id", "title", "source_key", "document_type", "page_number", ... } }`.
 - **pgvector** — `langchain_pg_embedding` rows grouped under the collection `promtior_docs`.
-- **DynamoDB chat table** — one item per session with the rolling summary, recent messages, and request count.
+- **DynamoDB chat table** — one item per session with the rolling summary and recent messages.
 - **Secrets Manager** — OpenAI API key and RDS credentials.
 
 ## Request flow
 
 1. Frontend sends `POST /chat/stream` with `{ session_id, message }`.
-2. Backend reserves a request slot in DynamoDB (atomic conditional update; returns 429 if the quota is exhausted).
-3. Backend loads the conversation summary + recent messages, embeds the question, and retrieves the top `RETRIEVAL_K` chunks from pgvector.
-4. Backend renders the locked prompt (`SYSTEM_PROMPT` + `USER_PROMPT_TEMPLATE`) with the retrieved chunks as `DOCS`, and streams the LLM response.
-5. After the stream ends, the user message and assistant reply are appended to the session; if history exceeds `HISTORY_MAX_MESSAGES`, it is folded into the summary.
+2. Backend loads the conversation summary + recent messages, embeds the question, and retrieves the top `RETRIEVAL_K` chunks from pgvector.
+3. Backend renders the locked prompt (`SYSTEM_PROMPT` + `USER_PROMPT_TEMPLATE`) with the retrieved chunks as `DOCS`, and streams the LLM response.
+4. After the stream ends, the user message and assistant reply are appended to the session; if history exceeds `HISTORY_MAX_MESSAGES`, it is folded into the summary.
 
 ## Key environment variables
 
@@ -43,5 +42,5 @@ Declared in `chat-api/app/config.py` and the two Lambda handlers:
 - `CHAT_TABLE_NAME` — DynamoDB table for sessions.
 - `LLM_MODEL`, `SUMMARY_MODEL`, `EMBEDDING_MODEL`.
 - `PGVECTOR_COLLECTION`, `RETRIEVAL_K`.
-- `HISTORY_MAX_MESSAGES`, `HISTORY_KEEP_RECENT`, `SESSION_MAX_REQUESTS`.
+- `HISTORY_MAX_MESSAGES`, `HISTORY_KEEP_RECENT`.
 - `CORS_ALLOW_ORIGINS`.

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { ChatMessage } from "../../types";
 import { AssistantMessage } from "./AssistantMessage";
 import { UserMessage } from "./UserMessage";
@@ -7,19 +7,29 @@ import { EmptyState } from "./EmptyState";
 interface ChatWindowProps {
   messages: ChatMessage[];
   isThinking: boolean;
+  streamingMessageId: string | null;
   onSelectPrompt: (prompt: string) => void;
 }
 
 export function ChatWindow({
   messages,
   isThinking,
+  streamingMessageId,
   onSelectPrompt,
 }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  // During streaming we append tokens on every render; smooth-scrolling each
+  // frame feels laggy and fights the browser, so fall back to instant scroll.
+  const streamingContent =
+    streamingMessageId !== null
+      ? messages.find((m) => m.id === streamingMessageId)?.content ?? ""
+      : null;
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, isThinking]);
+  useLayoutEffect(() => {
+    const behavior: ScrollBehavior =
+      streamingMessageId !== null ? "auto" : "smooth";
+    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+  }, [messages.length, isThinking, streamingMessageId, streamingContent]);
 
   const isEmpty = messages.length === 0 && !isThinking;
 
@@ -34,7 +44,11 @@ export function ChatWindow({
               m.role === "user" ? (
                 <UserMessage key={m.id} content={m.content} />
               ) : (
-                <AssistantMessage key={m.id} content={m.content} />
+                <AssistantMessage
+                  key={m.id}
+                  content={m.content}
+                  isStreaming={m.id === streamingMessageId}
+                />
               ),
             )}
             {isThinking && <AssistantMessage content="" isThinking />}

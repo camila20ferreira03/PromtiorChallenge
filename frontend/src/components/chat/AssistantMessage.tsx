@@ -6,6 +6,7 @@ import { ThinkingIndicator } from "./ThinkingIndicator";
 interface AssistantMessageProps {
   content: string;
   isThinking?: boolean;
+  isStreaming?: boolean;
 }
 
 function AssistantAvatar() {
@@ -26,7 +27,20 @@ function AssistantAvatar() {
   );
 }
 
-export function AssistantMessage({ content, isThinking }: AssistantMessageProps) {
+function StreamingCaret() {
+  return (
+    <span
+      aria-hidden="true"
+      className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[0.15em] rounded-sm bg-accent-cyan align-middle animate-caret-blink"
+    />
+  );
+}
+
+export function AssistantMessage({
+  content,
+  isThinking,
+  isStreaming,
+}: AssistantMessageProps) {
   const showThinking = isThinking && !content;
   return (
     <div className="flex items-start gap-3">
@@ -38,6 +52,7 @@ export function AssistantMessage({ content, isThinking }: AssistantMessageProps)
           ) : (
             <div className="prose prose-invert prose-sm max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-3 prose-headings:mb-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-3 prose-pre:rounded-xl prose-pre:bg-black/60 prose-pre:border prose-pre:border-white/[0.06] prose-code:text-accent-cyan prose-code:before:content-none prose-code:after:content-none prose-blockquote:border-l-accent-cyan/40 prose-blockquote:text-white/70 prose-a:text-accent-cyan prose-a:no-underline hover:prose-a:underline prose-strong:text-white">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              {isStreaming && <StreamingCaret />}
             </div>
           )}
         </MessageBubble>

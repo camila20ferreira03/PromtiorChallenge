@@ -92,6 +92,28 @@ def _summarize(prev_summary: str, messages: list[Message]) -> str:
             [SystemMessage(content=_SUMMARIZER_SYSTEM), HumanMessage(content=payload)]
         )
         return (response.content or "").strip()
-    except Exception:
-        log.exception("summarizer failed; keeping previous summary")
+    except Exception as exc:
+        body = _openai_error_body(exc)
+        log.exception(
+            "summarizer failed; keeping previous summary. "
+            "model=%s payload_chars=%d prev_summary_chars=%d messages=%d body=%s",
+            SUMMARY_MODEL,
+            len(payload),
+            len(prev_summary or ""),
+            len(messages),
+            body,
+        )
         return prev_summary
+
+
+def _openai_error_body(exc: BaseException) -> str:
+    """Best-effort extraction of the OpenAI error body (what actually tells you why it 400'd)."""
+    response = getattr(exc, "response", None)
+    if response is not None:
+        text = getattr(response, "text", None)
+        if text:
+            return str(text)[:2000]
+    body = getattr(exc, "body", None)
+    if body:
+        return str(body)[:2000]
+    return str(exc)[:2000]
