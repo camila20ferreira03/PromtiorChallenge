@@ -1,0 +1,7 @@
+langchain-core>=0.3,<0.4
+langchain-openai>=0.2,<0.3
+langchain-postgres>=0.0.12,<0.1
+psycopg[binary]>=3.2,<4
+sqlalchemy>=2.0,<3
+openai>=1.40,<2
+tiktoken>=0.7,<1
