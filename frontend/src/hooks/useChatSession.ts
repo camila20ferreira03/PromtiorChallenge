@@ -62,10 +62,16 @@ export function useChatSession(): UseChatSession {
         setMessages((prev) => [...prev, replyMsg]);
       } catch (err) {
         if (activeSessionRef.current !== currentSession) return;
-        const message =
-          err instanceof Error ? err.message : "Something went wrong.";
-        setError(message);
-        setIsSessionRequestLimit(isSessionRequestLimitError(message));
+        const technicalMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        if (import.meta.env.DEV) {
+          console.error("Chat request failed:", err);
+        }
+        setIsSessionRequestLimit(
+          isSessionRequestLimitError(technicalMessage),
+        );
+        // Never surface HTTP bodies, stack traces, or network details in UI.
+        setError("An internal error occurred. Please try again.");
       } finally {
         if (activeSessionRef.current === currentSession) setIsThinking(false);
       }

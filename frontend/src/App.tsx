@@ -63,10 +63,7 @@ export default function App() {
                         </p>
                       </>
                     ) : (
-                      <>
-                        <span className="font-medium">Something went wrong.</span>{" "}
-                        <span className="text-red-200/80">{error}</span>
-                      </>
+                      <p className="text-red-200/90">{error}</p>
                     )}
                   </div>
                   <button
