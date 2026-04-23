@@ -90,21 +90,13 @@ data "aws_iam_policy_document" "chat_inline" {
   }
 
   statement {
-    sid    = "ListProcessed"
+    sid    = "PgVectorDBSecret"
     effect = "Allow"
     actions = [
-      "s3:ListBucket",
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret",
     ]
-    resources = [var.processed_bucket_arn]
-  }
-
-  statement {
-    sid    = "ReadProcessedObjects"
-    effect = "Allow"
-    actions = [
-      "s3:GetObject",
-    ]
-    resources = ["${var.processed_bucket_arn}/*"]
+    resources = [var.db_secret_arn]
   }
 
   statement {
@@ -174,8 +166,11 @@ locals {
       -p ${var.container_port}:${var.container_port} \
       -e AWS_REGION="$${AWS_REGION}" \
       -e CHAT_TABLE_NAME="${var.chat_table_name}" \
-      -e PROCESSED_BUCKET="${var.processed_bucket_name}" \
       -e OPENAI_SECRET_ARN="${aws_secretsmanager_secret.openai.arn}" \
+      -e DB_SECRET_ARN="${var.db_secret_arn}" \
+      -e EMBEDDING_MODEL="${var.embedding_model}" \
+      -e PGVECTOR_COLLECTION="${var.pgvector_collection}" \
+      -e RETRIEVAL_K="${var.retrieval_k}" \
       -e LLM_MODEL="${var.llm_model}" \
       -e SUMMARY_MODEL="${var.summary_model}" \
       -e SESSION_MAX_REQUESTS="${var.session_max_requests}" \

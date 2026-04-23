@@ -18,6 +18,32 @@ output "lambda_log_group_name" {
   value       = module.lambda.log_group_name
 }
 
+output "embedding_lambda_function_name" {
+  description = "Embedding processor Lambda function name."
+  value       = module.lambda.embedding_function_name
+}
+
+output "embedding_lambda_log_group_name" {
+  description = "CloudWatch log group for the embedding processor."
+  value       = module.lambda.embedding_log_group_name
+}
+
+output "pgvector_endpoint" {
+  description = "RDS Postgres endpoint (host:port) backing pgvector."
+  value       = module.rds.endpoint
+}
+
+output "pgvector_db_name" {
+  description = "Initial database name used by pgvector."
+  value       = module.rds.db_name
+}
+
+output "pgvector_secret_arn" {
+  description = "Secrets Manager ARN holding RDS credentials (JSON)."
+  value       = module.rds.secret_arn
+  sensitive   = true
+}
+
 output "chat_table_name" {
   description = "DynamoDB table storing chat sessions and messages."
   value       = module.dynamodb.table_name

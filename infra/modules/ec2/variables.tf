@@ -52,19 +52,32 @@ variable "chat_table_arn" {
   description = "DynamoDB table ARN for IAM scoping."
 }
 
-variable "processed_bucket_name" {
-  type        = string
-  description = "S3 bucket with processed chunks consumed by the chat backend."
-}
-
-variable "processed_bucket_arn" {
-  type        = string
-  description = "S3 bucket ARN for IAM scoping."
-}
-
 variable "ecr_repository_arn" {
   type        = string
   description = "ECR repository ARN hosting the chat image."
+}
+
+variable "db_secret_arn" {
+  type        = string
+  description = "Secrets Manager ARN with RDS Postgres credentials (JSON: host, port, dbname, username, password)."
+}
+
+variable "embedding_model" {
+  type        = string
+  description = "OpenAI embedding model id used at query time (must match what the embedding Lambda wrote)."
+  default     = "text-embedding-3-small"
+}
+
+variable "pgvector_collection" {
+  type        = string
+  description = "langchain_postgres PGVector collection name (logical grouping inside the DB)."
+  default     = "promtior_docs"
+}
+
+variable "retrieval_k" {
+  type        = number
+  description = "Number of top chunks retrieved per user query."
+  default     = 6
 }
 
 variable "llm_model" {

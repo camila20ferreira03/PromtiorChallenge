@@ -69,8 +69,26 @@ variable "chat_session_max_requests" {
   default     = 10
 }
 
+variable "embedding_model" {
+  type        = string
+  description = "OpenAI embedding model id shared by the embedding Lambda and the chat API query path."
+  default     = "text-embedding-3-small"
+}
+
+variable "pgvector_collection" {
+  type        = string
+  description = "langchain_postgres PGVector collection name used by the embedding Lambda and the chat API."
+  default     = "promtior_docs"
+}
+
+variable "retrieval_k" {
+  type        = number
+  description = "Top-k chunks retrieved from pgvector per chat message."
+  default     = 6
+}
+
 variable "chat_cors_allow_origins" {
-  type = list(string)
+  type        = list(string)
   description = <<-EOT
     Origins allowed by the chat API (CORS). Include local dev and, after the first apply,
     https://<frontend_cloudfront_domain> from terraform output, then apply again so EC2
