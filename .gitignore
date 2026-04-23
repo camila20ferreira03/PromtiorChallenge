@@ -25,8 +25,5 @@ lambda/embedding_processor/build/
 
 files/
 
-# Shell scripts (local deploy helpers, etc.)
-**/*.sh
-!scripts/*.sh
-
+# Local deploy helpers, untracked on purpose.
 scripts/

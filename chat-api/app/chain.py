@@ -2,7 +2,7 @@
 
 Design:
   1. Enforce per-session quota (atomic conditional UpdateItem).
-  2. Load conversation context and the cached S3 docs.
+  2. Embed the user question and pull top-k chunks from pgvector (app.vectors).
   3. Render the locked prompt (see SYSTEM_PROMPT / USER_PROMPT_TEMPLATE).
   4. Stream tokens from the LLM while accumulating the full reply.
   5. After the stream drains (same code path for invoke and stream), persist
