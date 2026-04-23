@@ -11,6 +11,7 @@ Design:
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, AsyncIterator
 
 from fastapi import HTTPException
@@ -28,11 +29,10 @@ from langchain_core.runnables import RunnableGenerator
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from app.config import LLM_MODEL, SESSION_MAX_REQUESTS
-from app.docs import get_docs_json
+from app.config import LLM_MODEL, RETRIEVAL_K, SESSION_MAX_REQUESTS
 from app.memory import append_and_maybe_summarize, format_context, load_context
-from app.prompt_metrics import log_chat_prompt
 from app.storage import QuotaExceededError, reserve_request_slot
+from app.vectors import format_retrieved_as_docs_json, retrieve
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +106,34 @@ def _coerce_input(payload: Any) -> dict[str, str]:
 
 
 def _build_llm() -> ChatOpenAI:
-    return ChatOpenAI(model=LLM_MODEL, temperature=0.2, streaming=True)
+    # stream_usage=True makes OpenAI emit a final chunk carrying input/output token
+    # counts, which we pull off in _atransform to log per-request token usage.
+    return ChatOpenAI(model=LLM_MODEL, temperature=0.2, streaming=True, stream_usage=True)
+
+
+def _log_retrieval(session_id: str, query: str, retrieved: list[dict[str, Any]], elapsed_ms: float) -> None:
+    """Emit one structured line per /chat so we can see which chunks fed the prompt."""
+    preview = []
+    for i, chunk in enumerate(retrieved):
+        meta = chunk.get("metadata") or {}
+        preview.append(
+            {
+                "rank": i,
+                "score": round(float(chunk.get("score", 0.0)), 4),
+                "source_id": meta.get("source_id"),
+                "title": meta.get("title") or meta.get("source_key"),
+                "document_type": meta.get("document_type"),
+                "preview": (chunk.get("text") or "")[:80].replace("\n", " "),
+            }
+        )
+    log.info(
+        "retrieval session=%s k=%d elapsed_ms=%.1f query=%r chunks=%s",
+        session_id,
+        len(retrieved),
+        elapsed_ms,
+        query[:120],
+        preview,
+    )
 
 
 def _openai_user_message(exc: BaseException) -> str:
@@ -180,9 +207,16 @@ async def _atransform(
                 detail=f"session request limit reached ({SESSION_MAX_REQUESTS})",
             )
 
+        t0 = time.perf_counter()
         summary, recent = load_context(session_id)
         context_str = format_context(summary, recent)
-        docs_json = get_docs_json()
+
+        t_retr_start = time.perf_counter()
+        retrieved = retrieve(message, k=RETRIEVAL_K)
+        t_retr_ms = (time.perf_counter() - t_retr_start) * 1000
+        _log_retrieval(session_id, message, retrieved, t_retr_ms)
+
+        docs_json = format_retrieved_as_docs_json(retrieved)
 
         messages = _PROMPT.format_messages(
             retrieved_documents_json=docs_json,
@@ -191,12 +225,20 @@ async def _atransform(
         )
 
         accumulated: list[str] = []
+        input_tokens = output_tokens = total_tokens = 0
+        t_llm_start = time.perf_counter()
         try:
             async for chunk in llm.astream(messages):
                 text = getattr(chunk, "content", "") or ""
                 if text:
                     accumulated.append(text)
                     yield text
+                # OpenAI emits usage only on the final chunk when stream_usage=True.
+                usage = getattr(chunk, "usage_metadata", None)
+                if usage:
+                    input_tokens = int(usage.get("input_tokens", 0) or 0)
+                    output_tokens = int(usage.get("output_tokens", 0) or 0)
+                    total_tokens = int(usage.get("total_tokens", input_tokens + output_tokens) or 0)
         except (RateLimitError, AuthenticationError, PermissionDeniedError, BadRequestError) as e:
             raise _http_exception_from_openai(e) from e
         except APIConnectionError as e:
@@ -206,7 +248,25 @@ async def _atransform(
         except APIError as e:
             raise _http_exception_from_openai(e) from e
 
+        t_llm_ms = (time.perf_counter() - t_llm_start) * 1000
+        t_total_ms = (time.perf_counter() - t0) * 1000
         full_reply = "".join(accumulated)
+
+        log.info(
+            "chat_done session=%s model=%s k=%d retrieval_ms=%.1f llm_ms=%.1f total_ms=%.1f "
+            "input_tokens=%d output_tokens=%d total_tokens=%d reply_chars=%d",
+            session_id,
+            LLM_MODEL,
+            len(retrieved),
+            t_retr_ms,
+            t_llm_ms,
+            t_total_ms,
+            input_tokens,
+            output_tokens,
+            total_tokens,
+            len(full_reply),
+        )
+
         try:
             append_and_maybe_summarize(session_id, message, full_reply)
         except Exception:

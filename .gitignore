@@ -20,6 +20,7 @@ venv/
 node_modules/
 *.zip
 lambda/document_processor/build/
+lambda/embedding_processor/build/
 .DS_Store
 
 files/

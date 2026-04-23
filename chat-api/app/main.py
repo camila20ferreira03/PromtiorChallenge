@@ -1,4 +1,4 @@
-"""FastAPI entrypoint wiring LangServe, doc cache warmup, and OpenAI key load."""
+"""FastAPI entrypoint wiring LangServe and the OpenAI key load."""
 from __future__ import annotations
 
 import logging
@@ -12,12 +12,13 @@ from langserve import add_routes
 from app.chain import chat_chain
 from app.config import (
     CHAT_TABLE_NAME,
+    EMBEDDING_MODEL,
     LLM_MODEL,
-    PROCESSED_BUCKET,
+    PGVECTOR_COLLECTION,
+    RETRIEVAL_K,
     SESSION_MAX_REQUESTS,
     load_openai_key,
 )
-from app.docs import get_chunk_count, load_docs
 from app.storage import get_request_count
 
 logging.basicConfig(
@@ -30,15 +31,10 @@ log = logging.getLogger("chat-api")
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     load_openai_key()
-    try:
-        count = load_docs()
-        log.info("doc cache warmed: %d chunks", count)
-    except Exception:
-        log.exception("doc cache warmup failed; continuing with empty cache")
     yield
 
 
-app = FastAPI(title="Promtior Chat API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Promtior Chat API", version="0.2.0", lifespan=lifespan)
 
 _cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
@@ -61,10 +57,11 @@ def config() -> dict[str, object]:
     return {
         "aws_region": os.getenv("AWS_REGION"),
         "chat_table_name": CHAT_TABLE_NAME,
-        "processed_bucket": PROCESSED_BUCKET,
         "llm_model": LLM_MODEL,
+        "embedding_model": EMBEDDING_MODEL,
+        "pgvector_collection": PGVECTOR_COLLECTION,
+        "retrieval_k": RETRIEVAL_K,
         "session_max_requests": SESSION_MAX_REQUESTS,
-        "cached_chunks": get_chunk_count(),
     }
 
 
@@ -77,12 +74,6 @@ def session_usage(session_id: str) -> dict[str, object]:
         "limit": SESSION_MAX_REQUESTS,
         "remaining": max(SESSION_MAX_REQUESTS - used, 0),
     }
-
-
-@app.post("/admin/refresh-docs")
-def refresh_docs() -> dict[str, int]:
-    count = load_docs()
-    return {"chunks": count}
 
 
 add_routes(
